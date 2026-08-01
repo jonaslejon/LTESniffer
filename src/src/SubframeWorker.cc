@@ -4,6 +4,7 @@
 #include "falcon/prof/Lifetime.h"
 
 #include <iostream>
+#include <cstdio>   // [ULDL-PATCH] fprintf for the DL/UL DCI-count trace
 
 /* Buffers for PCH reception (not included in DL HARQ) */
 const static uint32_t pch_payload_buffer_sz = 8 * 1024; // cf. srsran: srsue/hdr/mac/mac.h
@@ -231,6 +232,19 @@ void SubframeWorker::run_dl_mode(SubframeInfo &subframeInfo)
                                    sf_idx);
   /*Start decoding PDSCH*/
   pdschdecoder->decode_dl_mode();
+  // [ULDL-PATCH] per-UE raw DL+UL DCI counts from the blind search (same stage
+  // for both) for offline per-C-RNTI DL/UL asymmetry. Do NOT use DCIMCS for the
+  // DL side: it counts only decoded PDSCH and under-counts DL.
+  {
+  	uint32_t uldl_tti = sfn * 10 + sf_idx;
+  	std::vector<DL_Sniffer_DCI_DL> dl_trace = subframeInfo.getDCICollection().getDLSnifferDCI_DL();
+  	for (std::vector<DL_Sniffer_DCI_DL>::iterator it = dl_trace.begin(); it != dl_trace.end(); ++it)
+  		if (it->rnti >= 61 && it->rnti <= 65523)
+  			fprintf(stderr, "DCIDL,%u,%u\n", uldl_tti, (unsigned)it->rnti);
+  	std::vector<DCI_UL> ul_trace = subframeInfo.getDCICollection().getULSnifferDCI_UL();
+  	for (std::vector<DCI_UL>::iterator it = ul_trace.begin(); it != ul_trace.end(); ++it)
+  		fprintf(stderr, "DCIUL,%u,%u,%d\n", uldl_tti, (unsigned)it->rnti, it->is_rar_gant);
+  }
 }
 
 void SubframeWorker::run_ul_mode(SubframeInfo &subframeInfo, uint32_t tti)
