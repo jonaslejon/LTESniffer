@@ -318,14 +318,35 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif(HAVE_SSE)
   endif(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 
-  if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
-
-    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -mfpu=neon -march=native -DIS_ARM -DHAVE_NEON")
-    message(STATUS "have ARM")
+  # Detect ARM NEON.
+  #
+  # CMake's MATCHES is a regex search, which makes the naive test wrong in two
+  # different ways on 64-bit ARM:
+  #
+  #   "aarch64" (Linux)                does NOT contain "arm" -> never matched,
+  #                                    HAVE_NEON stayed False, and with HAVE_SSE
+  #                                    also false the build aborted below at
+  #                                    "no SIMD instructions found".
+  #   "arm64"   (macOS/Apple silicon)  DOES contain "arm" -> matched, but was
+  #                                    then handed -mfpu=neon, which is armv7-only
+  #                                    syntax that 64-bit compilers reject.
+  #
+  # So 64-bit ARM must be tested FIRST and matched on both spellings; on 64-bit
+  # ARM NEON/ASIMD is architecturally mandatory, so no -mfpu flag is needed.
+  # -mfpu=neon is kept for 32-bit ARM only.
+  if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64|arm64")
+    message(STATUS "have ARM (64-bit, NEONv8/ASIMD)")
     set(HAVE_NEON "True")
-  else(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+    set(HAVE_NEONv8 "True")
+    set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -march=native -DIS_ARM -DHAVE_NEON -DHAVE_NEONv8")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHAVE_NEONv8")
+  elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+    message(STATUS "have ARM (32-bit, NEON)")
+    set(HAVE_NEON "True")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfpu=neon -march=native -DIS_ARM -DHAVE_NEON")
+  else()
     set(HAVE_NEON "False")
-  endif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm")
+  endif()
   set(CMAKE_REQUIRED_FLAGS ${CMAKE_C_FLAGS})
 
   if(NOT HAVE_SSE AND NOT HAVE_NEON AND NOT DISABLE_SIMD)
