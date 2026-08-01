@@ -1034,6 +1034,9 @@ int PDSCH_Decoder::decode_dl_mode()
 						if (pdsch_res[tb].crc && result_length > 0)
 						{
 							write_pcap(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, 0);
+							// [MCS-PATCH] per-DCI PHY trace (MCS/PRB/MIMO) for offline profiling
+							if (RNTI_name != "SI_RNTI" && RNTI_name != "P_RNTI" && RNTI_name != "RA_RNTI")
+								fprintf(stderr, "DCIMCS,%u,%u,%u,%u,%u,%u,%d,%d\n", tti, (unsigned)cur_rnti, cur_grant->tb[tb].mcs_idx, (unsigned)cur_grant->tb[tb].mod, cur_grant->nof_prb, cur_grant->nof_layers, (int)cur_format, cur_grant->tb[tb].tbs);
 							if (RNTI_name == "RA_RNTI")
 							{
 								unpack_rar_response_dl_mode(pdsch_res[tb].payload, result_length);
@@ -1126,6 +1129,9 @@ int PDSCH_Decoder::decode_dl_mode()
 						if (pdsch_res[tb].crc && result_length > 0)
 						{
 							write_pcap(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, 0);
+							// [MCS-PATCH] per-DCI PHY trace (MCS/PRB/MIMO) for offline profiling
+							if (RNTI_name != "SI_RNTI" && RNTI_name != "P_RNTI" && RNTI_name != "RA_RNTI")
+								fprintf(stderr, "DCIMCS,%u,%u,%u,%u,%u,%u,%d,%d\n", tti, (unsigned)cur_rnti, cur_grant->tb[tb].mcs_idx, (unsigned)cur_grant->tb[tb].mod, cur_grant->nof_prb, cur_grant->nof_layers, (int)cur_format, cur_grant->tb[tb].tbs);
 							if (RNTI_name == "RA_RNTI")
 							{
 								unpack_rar_response_dl_mode(pdsch_res[tb].payload, result_length);
@@ -1222,6 +1228,9 @@ int PDSCH_Decoder::decode_dl_mode()
 							if (pdsch_res[tb].crc && result_length > 0)
 							{
 								write_pcap(RNTI_name, pdsch_res[tb].payload, result_length, cur_rnti, tti, 0);
+								// [MCS-PATCH] per-DCI PHY trace (MCS/PRB/MIMO) for offline profiling
+								if (RNTI_name != "SI_RNTI" && RNTI_name != "P_RNTI" && RNTI_name != "RA_RNTI")
+									fprintf(stderr, "DCIMCS,%u,%u,%u,%u,%u,%u,%d,%d\n", tti, (unsigned)cur_rnti, cur_grant256->tb[tb].mcs_idx, (unsigned)cur_grant256->tb[tb].mod, cur_grant256->nof_prb, cur_grant256->nof_layers, (int)cur_format, cur_grant256->tb[tb].tbs);
 								// update mcs table to database when mcs < 28 because 256QAM table:
 								// cur_ran_dci_dl->tb[tb].mcs_idx > 0 && cur_ran_dci_dl->tb[tb].mcs_idx < 28 && decoding_mem.format > SRSRAN_DCI_FORMAT1A && result_length > 0
 								if (cur_ran_dci_dl->tb[tb].mcs_idx > 0 && cur_ran_dci_dl->tb[tb].mcs_idx < 28 && decoding_mem.format > SRSRAN_DCI_FORMAT1A && result_length > 0)
