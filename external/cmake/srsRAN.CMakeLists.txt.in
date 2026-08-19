@@ -1,4 +1,4 @@
- 
+
 cmake_minimum_required(VERSION 2.8.2)
 
 project(srsLTE-download NONE)
@@ -10,6 +10,21 @@ ExternalProject_Add(srsRAN
 #    GIT_TAG falcon_v0.1
     SOURCE_DIR "${CMAKE_BINARY_DIR}/srsRAN-src"
     BINARY_DIR "${CMAKE_BINARY_DIR}/srsRAN-build"
+    # aarch64 (Raspberry Pi 5) fixes applied to the downloaded srsRAN2 dependency so that a plain
+    # `cmake && make` builds AND runs on 64-bit ARM. Both are no-ops on x86_64.
+    #   1) FFTW_MEASURE -> FFTW_ESTIMATE. srsRAN plans its FFTs with FFTW_MEASURE, which runs live
+    #      timing experiments to pick an FFT kernel. On aarch64 that planning is pathologically slow
+    #      and effectively HANGS on the 100-PRB decode FFTs -- the sniffer locks the cell and decodes
+    #      MIB, then spins forever in fftwf_measure_execution_time before reading a single decode-rate
+    #      sample, so it decodes 0 subframes / 0 DCIs (looks like a stall, not an error). ESTIMATE uses
+    #      a heuristic (near-instant planning, negligible runtime cost) -- the right choice for a
+    #      startup-sensitive real-time sniffer. Verified on a Pi 5: without it, 0 phones; with it, a
+    #      full live decode (451 C-RNTIs on a live cell).
+    #   2) Strip srsRAN2's blanket `-Werror`, which promotes a false-positive -Wmaybe-uninitialized in
+    #      its NEON turbo decoder (turbodecoder_win.h) -- a path compiled only on aarch64 -- to a hard
+    #      build error.
+    PATCH_COMMAND sed -i "s/#define FFTW_TYPE FFTW_MEASURE/#define FFTW_TYPE FFTW_ESTIMATE/" <SOURCE_DIR>/lib/src/phy/dft/dft_fftw.c
+            COMMAND sed -i "s/ -Werror//g" <SOURCE_DIR>/CMakeLists.txt
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
